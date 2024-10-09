@@ -7,7 +7,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
   return (
     <div>
-      <h1>Sand and Fluid Simulation</h1>
+      <h1>sands</h1>
       {children}
     </div>
   );
