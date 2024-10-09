@@ -6,8 +6,14 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }: LayoutProps) => {
   return (
-    <div>
-      <h1>sands</h1>
+    <div style={{ 
+      width: '100vw', 
+      height: '100vh', 
+      overflow: 'hidden', 
+      position: 'fixed', 
+      top: 0, 
+      left: 0 
+    }}>
       {children}
     </div>
   );

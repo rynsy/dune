@@ -1,4 +1,4 @@
-const CELL_SIZE = 2;
+const CELL_SIZE = 1; // Change this from 2 to 1
 
 export interface SimulationState {
   grid: Uint8Array;
@@ -27,59 +27,82 @@ export const addSandParticle = (state: SimulationState, x: number, y: number, co
   return state;
 };
 
-export const updateSandSimulation = (state: SimulationState, ctx: CanvasRenderingContext2D): SimulationState => {
+export const updateSandSimulation = (state: SimulationState, ctx: CanvasRenderingContext2D, gravity: number, fallSpeed: number): SimulationState => {
   const { grid, width, height, colors } = state;
-  const newGrid = new Uint8Array(grid);
+  const newGrid = new Uint8Array(grid.length);
+
+  const maxFallDistance = Math.ceil(fallSpeed);
 
   for (let y = height - 1; y >= 0; y--) {
     for (let x = 0; x < width; x++) {
       const i = y * width + x;
-      if (grid[i] !== 0) {
-        if (y + 1 < height) {
-          if (grid[(y + 1) * width + x] === 0) {
-            newGrid[(y + 1) * width + x] = grid[i];
-            newGrid[i] = 0;
-          } else if (x > 0 && grid[(y + 1) * width + (x - 1)] === 0) {
-            newGrid[(y + 1) * width + (x - 1)] = grid[i];
-            newGrid[i] = 0;
-          } else if (x < width - 1 && grid[(y + 1) * width + (x + 1)] === 0) {
-            newGrid[(y + 1) * width + (x + 1)] = grid[i];
-            newGrid[i] = 0;
+      const cell = grid[i];
+
+      if (cell === 0) continue; // Empty cell
+
+      let newY = y;
+      let moved = false;
+
+      for (let fall = 0; fall < maxFallDistance && newY < height - 1; fall++) {
+        const below = (newY + 1) * width + x;
+        const belowLeft = (newY + 1) * width + (x - 1);
+        const belowRight = (newY + 1) * width + (x + 1);
+
+        if (Math.random() < gravity) {
+          if (newGrid[below] === 0 && grid[below] === 0) {
+            newY++;
+            moved = true;
+          } else if (x > 0 && newGrid[belowLeft] === 0 && grid[belowLeft] === 0) {
+            newY++;
+            x--;
+            moved = true;
+          } else if (x < width - 1 && newGrid[belowRight] === 0 && grid[belowRight] === 0) {
+            newY++;
+            x++;
+            moved = true;
+          } else {
+            break;
           }
+        } else {
+          break;
         }
       }
+
+      const newIndex = newY * width + x;
+      newGrid[newIndex] = cell;
     }
   }
 
-  // Render the grid
-  const imageData = ctx.createImageData(width * CELL_SIZE, height * CELL_SIZE);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const colorIndex = newGrid[y * width + x];
-      if (colorIndex !== 0) {
-        const color = colors[colorIndex - 1];
-        const r = parseInt(color.slice(1, 3), 16);
-        const g = parseInt(color.slice(3, 5), 16);
-        const b = parseInt(color.slice(5, 7), 16);
-        for (let dy = 0; dy < CELL_SIZE; dy++) {
-          for (let dx = 0; dx < CELL_SIZE; dx++) {
-            const i = ((y * CELL_SIZE + dy) * width * CELL_SIZE + (x * CELL_SIZE + dx)) * 4;
-            imageData.data[i] = r;
-            imageData.data[i + 1] = g;
-            imageData.data[i + 2] = b;
-            imageData.data[i + 3] = 255;
-          }
-        }
-      }
+  // Draw the updated grid
+  const imageData = ctx.getImageData(0, 0, width, height);
+  for (let i = 0; i < newGrid.length; i++) {
+    const cell = newGrid[i];
+    if (cell !== 0) {
+      const color = colors[cell - 1];
+      const [r, g, b] = hexToRgb(color);
+      const index = i * 4;
+      imageData.data[index] = r;
+      imageData.data[index + 1] = g;
+      imageData.data[index + 2] = b;
+      imageData.data[index + 3] = 255;
+    } else {
+      const index = i * 4;
+      imageData.data[index + 3] = 0; // Set alpha to 0 for empty cells
     }
   }
   ctx.putImageData(imageData, 0, 0);
 
-  // Draw FPS
-  const fps = Math.round(1000 / 16); // Assuming 60 FPS
-  ctx.fillStyle = 'white';
-  ctx.font = '12px Arial';
-  ctx.fillText(`FPS: ${fps}`, width * CELL_SIZE - 60, 20);
-
   return { ...state, grid: newGrid };
+};
+
+// Helper function to convert hex color to RGB
+const hexToRgb = (hex: string): [number, number, number] => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+      ]
+    : [0, 0, 0];
 };
