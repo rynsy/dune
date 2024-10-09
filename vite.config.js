@@ -8,5 +8,5 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true,
   },
-  base: '/personal_site/', // Replace with your actual repository name
+  base: '/dune/', // Replace with your actual repository name
 });
